@@ -117,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
       // 3. Insert Cells Tool
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'insert_notebook_cells',
-        description: `Insert multiple cells at the specified position in the active notebook. By default, new code cells are executed immediately unless noexec is set to true.
+        description: `Insert multiple cells at the specified position in the active notebook (0-based indexing). By default, new code cells are executed immediately unless noexec is set to true.
 
 Use this when you need to:
 - Add new code or markdown cells to the notebook
@@ -174,7 +174,7 @@ Examples:
             },
             insert_position: {
               type: 'integer',
-              description: 'Position to insert the cells (defaults to end)'
+              description: 'Position to insert the cells (0-based indexing, must be ≥ 0, defaults to end)'
             },
             noexec: {
               type: 'boolean',
@@ -221,7 +221,7 @@ Examples:
       // 4. Replace Cells Tool
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'replace_notebook_cells',
-        description: `Replace a range of cells in the notebook with new cells. Use this when you need to completely update or rewrite a section of the notebook. Executed automatically unless noexec is true.
+        description: `Replace a range of cells in the notebook with new cells (0-based indexing). Use this when you need to completely update or rewrite a section of the notebook. Executed automatically unless noexec is true.
 
 Use this when you need to:
 - Rewrite a section of analysis with a better approach
@@ -245,18 +245,21 @@ Examples:
   "end_index": 4,
   "cells": [{"content": "# New implementation to review\\nresults = new_analysis(df)", "cell_type": "code", "language_id": "python"}],
   "noexec": true
-}`,
+}
+
+3. Valid: start_index=1, end_index=3 (replaces cells 1 and 2)
+4. Invalid: start_index=1, end_index=1 (end must be > start)`,
         inputSchema: {
           type: 'object',
           required: ['start_index', 'end_index', 'cells'],
           properties: {
             start_index: {
               type: 'integer',
-              description: 'Start index of the range to replace'
+              description: 'Starting cell index (inclusive, must be ≥ 0)'
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to replace (exclusive - must be greater than start_index)'
+              description: 'Ending cell index (exclusive, must be > start_index)'
             },
             cells: {
               type: 'array',
@@ -340,7 +343,7 @@ Examples:
       // 5. Modify Cell Content Tool
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'modify_notebook_cell_content',
-        description: `Modify the content of an existing cell. Use this when you need to make changes to a single cell without affecting other cells. By default, modified code cells are executed unless noexec is true.
+        description: `Modify the content of an existing cell (0-based indexing). Use this when you need to make changes to a single cell without affecting other cells. By default, modified code cells are executed unless noexec is true.
 
 Use this when you need to:
 - Fix errors in code
@@ -367,7 +370,7 @@ Examples:
           properties: {
             cell_index: {
               type: 'integer',
-              description: 'Index of the cell to modify'
+              description: 'Index of the cell to modify (0-based indexing, must be ≥ 0)'
             },
             content: {
               type: 'string',
@@ -425,7 +428,7 @@ Examples:
       // 6. Execute Cells Tool
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'execute_notebook_cells',
-        description: `Execute a range of cells in the active notebook and get their outputs. Use this when you need to run cells to generate results, create visualizations, or verify that code is working correctly.
+        description: `Execute a range of cells in the active notebook (0-based indexing).
 
 Use this when you need to:
 - Run data processing steps
@@ -444,18 +447,21 @@ Examples:
 {
   "start_index": 4,
   "end_index": 5
-}`,
+}
+
+3. Valid: start_index=1, end_index=2 (executes cell 1)
+4. Invalid: start_index=1, end_index=1 (end must be > start)`,
         inputSchema: {
           type: 'object',
           required: ['start_index', 'end_index'],
           properties: {
             start_index: {
               type: 'integer',
-              description: 'Start index of the range to execute'
+              description: 'Starting cell index (inclusive, must be ≥ 0)'
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to execute (exclusive - must be greater than start_index)'
+              description: 'Ending cell index (exclusive, must be > start_index)'
             }
           }
         },
@@ -505,7 +511,7 @@ Examples:
       // 7. Delete Cells Tool
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'delete_notebook_cells',
-        description: `Delete a range of cells from the notebook. Use this when you need to remove unwanted or redundant cells to clean up the notebook.
+        description: `Delete a range of cells from the notebook (0-based indexing). Use this when you need to remove unwanted or redundant cells to clean up the notebook.
 
 Use this when you need to:
 - Remove debugging cells
@@ -524,18 +530,21 @@ Examples:
 {
   "start_index": 2,
   "end_index": 5
-}`,
+}
+
+3. Valid: start_index=1, end_index=2 (deletes cell 1)
+4. Invalid: start_index=1, end_index=1 (end must be > start)`,
         inputSchema: {
           type: 'object',
           required: ['start_index', 'end_index'],
           properties: {
             start_index: {
               type: 'integer',
-              description: 'Start index of the range to delete'
+              description: 'Starting cell index (inclusive, must be ≥ 0)'
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to delete (exclusive - must be greater than start_index)'
+              description: 'Ending cell index (exclusive, must be > start_index)'
             }
           }
         },
