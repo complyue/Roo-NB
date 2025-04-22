@@ -256,7 +256,7 @@ Examples:
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to replace (exclusive)'
+              description: 'End index of the range to replace (exclusive - must be greater than start_index)'
             },
             cells: {
               type: 'array',
@@ -455,7 +455,7 @@ Examples:
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to execute (exclusive)'
+              description: 'End index of the range to execute (exclusive - must be greater than start_index)'
             }
           }
         },
@@ -535,7 +535,7 @@ Examples:
             },
             end_index: {
               type: 'integer',
-              description: 'End index of the range to delete (exclusive)'
+              description: 'End index of the range to delete (exclusive - must be greater than start_index)'
             }
           }
         },
