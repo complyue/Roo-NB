@@ -1,16 +1,20 @@
 import * as vscode from 'vscode';
 import { NotebookService } from './notebook';
+import { z } from 'zod';
 
 // This will be the extension ID of the Roo extension
 const ROO_EXTENSION_ID = 'RooVeterinaryInc.roo-cline';
 
 interface RooAPI {
   extensionTools: {
-    registerTool(extensionId: string, tool: {
-      name: string;
-      description: string;
-      inputSchema?: object;
-      execute(args?: Record<string, unknown>): Promise<{
+    registerTool<T extends z.ZodTypeAny>(
+      extensionId: string,
+      options: {
+        name: string,
+        description: string,
+        inputSchema?: T
+      },
+      fn: (args: z.infer<T>) => Promise<{
         content: Array<{
           type: string;
           text?: string;
@@ -22,8 +26,8 @@ interface RooAPI {
           };
         }>;
         isError?: boolean;
-      }>;
-    }): void;
+      }>
+    ): void;
   };
 }
 
@@ -67,24 +71,24 @@ export function activate(context: vscode.ExtensionContext) {
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'get_notebook_info',
         description: `Get comprehensive information about the active notebook, including URI, kernel, and cell statistics. Use this tool when you need to understand what notebook is open, what kernel it uses, and how many cells it contains. Response will include notebook path, metadata, cell count, and kernel information if available.`,
-        execute: async () => {
-          try {
-            const info = await NotebookService.getNotebookInfo();
-            return {
-              content: [{
-                type: 'text',
-                text: info
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error getting notebook info: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+        inputSchema: z.object({})
+      }, async () => {
+        try {
+          const info = await NotebookService.getNotebookInfo();
+          return {
+            content: [{
+              type: 'text',
+              text: info
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error getting notebook info: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -92,25 +96,25 @@ export function activate(context: vscode.ExtensionContext) {
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'get_notebook_cells',
         description: `Get information about all cells in the active notebook. Use this to examine cell contents, types, and outputs before making edits or executing cells. Response includes cell indexes, types, content, and execution outputs (if any). Outputs longer than the configured limit will be truncated. Ask the user to adjust the \`maxOutputSize\` in case you think more or less information is better.`,
-        execute: async () => {
-          try {
-            const settings = getExtensionSettings();
-            const cells = await NotebookService.getCells(settings.maxOutputSize);
-            return {
-              content: [{
-                type: 'text',
-                text: cells
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error getting notebook cells: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+        inputSchema: z.object({})
+      }, async () => {
+        try {
+          const settings = getExtensionSettings();
+          const cells = await NotebookService.getCells(settings.maxOutputSize);
+          return {
+            content: [{
+              type: 'text',
+              text: cells
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error getting notebook cells: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -145,76 +149,47 @@ Examples:
   "insert_position": 2,
   "noexec": true
 }`,
-        inputSchema: {
-          type: 'object',
-          required: ['cells'],
-          properties: {
-            cells: {
-              type: 'array',
-              description: 'Array of cell definitions to insert',
-              items: {
-                type: 'object',
-                required: ['content'],
-                properties: {
-                  content: {
-                    type: 'string',
-                    description: 'Cell content'
-                  },
-                  cell_type: {
-                    type: 'string',
-                    description: 'Cell type ("code" or "markdown")',
-                    enum: ['code', 'markdown']
-                  },
-                  language_id: {
-                    type: 'string',
-                    description: 'Language ID for code cells (e.g., "python", "javascript")'
-                  }
-                }
-              }
-            },
-            insert_position: {
-              type: 'integer',
-              description: 'Position to insert the cells (0-based indexing, must be ≥ 0, defaults to end)'
-            },
-            noexec: {
-              type: 'boolean',
-              description: 'Skip execution of inserted cells (defaults to false)'
-            }
+        inputSchema: z.object({
+          cells: z.array(z.object({
+            content: z.string(),
+            cell_type: z.enum(['code', 'markdown']),
+            language_id: z.string().optional()
+          })),
+          insert_position: z.number().int().optional(),
+          noexec: z.boolean().optional()
+        })
+      }, async (args) => {
+        try {
+          if (!args || !args.cells || !Array.isArray(args.cells)) {
+            throw new Error('Missing required parameter: cells array');
           }
-        },
-        execute: async (args) => {
-          try {
-            if (!args || !args.cells || !Array.isArray(args.cells)) {
-              throw new Error('Missing required parameter: cells array');
-            }
 
-            const cells = args.cells as Array<{
-              content: string;
-              cell_type?: string;
-              language_id?: string;
-            }>;
+          const cells = args.cells as Array<{
+            content: string;
+            cell_type?: string;
+            language_id?: string;
+          }>;
 
-            const insertPosition = args.insert_position !== undefined ? Number(args.insert_position) : undefined;
-            const noexec = args.noexec === true;
-            const settings = getExtensionSettings();
+          const insertPosition = args.insert_position !== undefined ? Number(args.insert_position) : undefined;
+          const noexec = args.noexec === true;
+          const settings = getExtensionSettings();
 
-            const result = await NotebookService.insertCells(cells, insertPosition, noexec, settings.maxOutputSize, settings.timeoutSeconds);
+          const result = await NotebookService.insertCells(cells, insertPosition, noexec, settings.maxOutputSize, settings.timeoutSeconds);
 
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error inserting cells: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error inserting cells: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -249,94 +224,62 @@ Examples:
 
 3. Valid: start_index=1, end_index=3 (replaces cells 1 and 2)
 4. Invalid: start_index=1, end_index=1 (end must be > start)`,
-        inputSchema: {
-          type: 'object',
-          required: ['start_index', 'end_index', 'cells'],
-          properties: {
-            start_index: {
-              type: 'integer',
-              description: 'Starting cell index (inclusive, must be ≥ 0)'
-            },
-            end_index: {
-              type: 'integer',
-              description: 'Ending cell index (exclusive, must be > start_index)'
-            },
-            cells: {
-              type: 'array',
-              description: 'Array of cell definitions to insert',
-              items: {
-                type: 'object',
-                required: ['content'],
-                properties: {
-                  content: {
-                    type: 'string',
-                    description: 'Cell content'
-                  },
-                  cell_type: {
-                    type: 'string',
-                    description: 'Cell type ("code" or "markdown")',
-                    enum: ['code', 'markdown']
-                  },
-                  language_id: {
-                    type: 'string',
-                    description: 'Language ID for code cells (e.g., "python", "javascript")'
-                  }
-                }
+        inputSchema: z.object({
+          start_index: z.number().int().min(0),
+          end_index: z.number().int().min(0).gt(0),
+          cells: z.array(z.object({
+            content: z.string(),
+            cell_type: z.enum(['code', 'markdown']),
+            language_id: z.string().optional()
+          })),
+          noexec: z.boolean().optional()
+        })
+      }, async (args) => {
+        try {
+          if (!args || args.start_index === undefined || args.end_index === undefined || !args.cells || !Array.isArray(args.cells)) {
+            throw new Error('Missing required parameters: start_index, end_index, and cells array');
+          }
+
+          const startIndex = Number(args.start_index);
+          const endIndex = Number(args.end_index);
+          const cells = args.cells as Array<{
+            content: string;
+            cell_type?: string;
+            language_id?: string;
+          }>;
+
+          const noexec = args.noexec === true;
+          const settings = getExtensionSettings();
+
+          const result = await NotebookService.replaceCells(
+            (cellCount) => {
+              if (startIndex < 0 || startIndex >= cellCount) {
+                throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
               }
+              if (endIndex <= startIndex || endIndex > cellCount) {
+                throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
+              }
+              return { startIndex, endIndex, cells };
             },
-            noexec: {
-              type: 'boolean',
-              description: 'Skip execution of replaced cells (defaults to false)'
-            }
-          }
-        },
-        execute: async (args) => {
-          try {
-            if (!args || args.start_index === undefined || args.end_index === undefined || !args.cells || !Array.isArray(args.cells)) {
-              throw new Error('Missing required parameters: start_index, end_index, and cells array');
-            }
+            noexec,
+            settings.maxOutputSize,
+            settings.timeoutSeconds
+          );
 
-            const startIndex = Number(args.start_index);
-            const endIndex = Number(args.end_index);
-            const cells = args.cells as Array<{
-              content: string;
-              cell_type?: string;
-              language_id?: string;
-            }>;
-
-            const noexec = args.noexec === true;
-            const settings = getExtensionSettings();
-
-            const result = await NotebookService.replaceCells(
-              (cellCount) => {
-                if (startIndex < 0 || startIndex >= cellCount) {
-                  throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
-                }
-                if (endIndex <= startIndex || endIndex > cellCount) {
-                  throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
-                }
-                return { startIndex, endIndex, cells };
-              },
-              noexec,
-              settings.maxOutputSize,
-              settings.timeoutSeconds
-            );
-
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error replacing cells: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error replacing cells: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -364,64 +307,50 @@ Examples:
   "content": "import pandas as pd\\nimport numpy as np\\nimport matplotlib.pyplot as plt\\nimport seaborn as sns",
   "noexec": true
 }`,
-        inputSchema: {
-          type: 'object',
-          required: ['cell_index', 'content'],
-          properties: {
-            cell_index: {
-              type: 'integer',
-              description: 'Index of the cell to modify (0-based indexing, must be ≥ 0)'
-            },
-            content: {
-              type: 'string',
-              description: 'New content for the cell'
-            },
-            noexec: {
-              type: 'boolean',
-              description: 'Skip execution of the modified cell (defaults to false)'
-            }
+        inputSchema: z.object({
+          cell_index: z.number().int().min(0),
+          content: z.string(),
+          noexec: z.boolean().optional()
+        })
+      }, async (args) => {
+        try {
+          if (!args || args.cell_index === undefined || !args.content) {
+            throw new Error('Missing required parameters: cell_index and content');
           }
-        },
-        execute: async (args) => {
-          try {
-            if (!args || args.cell_index === undefined || !args.content) {
-              throw new Error('Missing required parameters: cell_index and content');
-            }
 
-            const cellIndex = Number(args.cell_index);
-            const content = String(args.content);
+          const cellIndex = Number(args.cell_index);
+          const content = String(args.content);
 
-            const noexec = args.noexec === true;
-            const settings = getExtensionSettings();
+          const noexec = args.noexec === true;
+          const settings = getExtensionSettings();
 
-            const result = await NotebookService.modifyCellContent(
-              (cellCount) => {
-                if (cellIndex < 0 || cellIndex >= cellCount) {
-                  throw new Error(`Cell index ${cellIndex} is out of bounds (0-${cellCount - 1})`);
-                }
-                return cellIndex;
-              },
-              content,
-              noexec,
-              settings.maxOutputSize,
-              settings.timeoutSeconds
-            );
+          const result = await NotebookService.modifyCellContent(
+            (cellCount) => {
+              if (cellIndex < 0 || cellIndex >= cellCount) {
+                throw new Error(`Cell index ${cellIndex} is out of bounds (0-${cellCount - 1})`);
+              }
+              return cellIndex;
+            },
+            content,
+            noexec,
+            settings.maxOutputSize,
+            settings.timeoutSeconds
+          );
 
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error modifying cell content: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error modifying cell content: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -451,60 +380,49 @@ Examples:
 
 3. Valid: start_index=1, end_index=2 (executes cell 1)
 4. Invalid: start_index=1, end_index=1 (end must be > start)`,
-        inputSchema: {
-          type: 'object',
-          required: ['start_index', 'end_index'],
-          properties: {
-            start_index: {
-              type: 'integer',
-              description: 'Starting cell index (inclusive, must be ≥ 0)'
+        inputSchema: z.object({
+          start_index: z.number().int().min(0),
+          end_index: z.number().int().min(0).gt(0)
+        })
+      }, async (args) => {
+        try {
+          if (!args || args.start_index === undefined || args.end_index === undefined) {
+            throw new Error('Missing required parameters: start_index and end_index');
+          }
+
+          const startIndex = Number(args.start_index);
+          const endIndex = Number(args.end_index);
+
+          const settings = getExtensionSettings();
+
+          const result = await NotebookService.executeCells(
+            (cellCount) => {
+              if (startIndex < 0 || startIndex >= cellCount) {
+                throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
+              }
+              if (endIndex <= startIndex || endIndex > cellCount) {
+                throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
+              }
+              return { startIndex, endIndex };
             },
-            end_index: {
-              type: 'integer',
-              description: 'Ending cell index (exclusive, must be > start_index)'
-            }
-          }
-        },
-        execute: async (args) => {
-          try {
-            if (!args || args.start_index === undefined || args.end_index === undefined) {
-              throw new Error('Missing required parameters: start_index and end_index');
-            }
+            settings.maxOutputSize,
+            settings.timeoutSeconds
+          );
 
-            const startIndex = Number(args.start_index);
-            const endIndex = Number(args.end_index);
-
-            const settings = getExtensionSettings();
-
-            const result = await NotebookService.executeCells(
-              (cellCount) => {
-                if (startIndex < 0 || startIndex >= cellCount) {
-                  throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
-                }
-                if (endIndex <= startIndex || endIndex > cellCount) {
-                  throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
-                }
-                return { startIndex, endIndex };
-              },
-              settings.maxOutputSize,
-              settings.timeoutSeconds
-            );
-
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error executing cells: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error executing cells: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -534,56 +452,45 @@ Examples:
 
 3. Valid: start_index=1, end_index=2 (deletes cell 1)
 4. Invalid: start_index=1, end_index=1 (end must be > start)`,
-        inputSchema: {
-          type: 'object',
-          required: ['start_index', 'end_index'],
-          properties: {
-            start_index: {
-              type: 'integer',
-              description: 'Starting cell index (inclusive, must be ≥ 0)'
-            },
-            end_index: {
-              type: 'integer',
-              description: 'Ending cell index (exclusive, must be > start_index)'
-            }
+        inputSchema: z.object({
+          start_index: z.number().int().min(0),
+          end_index: z.number().int().min(0).gt(0)
+        })
+      }, async (args) => {
+        try {
+          if (!args || args.start_index === undefined || args.end_index === undefined) {
+            throw new Error('Missing required parameters: start_index and end_index');
           }
-        },
-        execute: async (args) => {
-          try {
-            if (!args || args.start_index === undefined || args.end_index === undefined) {
-              throw new Error('Missing required parameters: start_index and end_index');
-            }
 
-            const startIndex = Number(args.start_index);
-            const endIndex = Number(args.end_index);
+          const startIndex = Number(args.start_index);
+          const endIndex = Number(args.end_index);
 
-            const result = await NotebookService.deleteCells(
-              (cellCount) => {
-                if (startIndex < 0 || startIndex >= cellCount) {
-                  throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
-                }
-                if (endIndex <= startIndex || endIndex > cellCount) {
-                  throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
-                }
-                return { startIndex, endIndex };
+          const result = await NotebookService.deleteCells(
+            (cellCount) => {
+              if (startIndex < 0 || startIndex >= cellCount) {
+                throw new Error(`Start index ${startIndex} is out of bounds (0-${cellCount - 1})`);
               }
-            );
+              if (endIndex <= startIndex || endIndex > cellCount) {
+                throw new Error(`End index ${endIndex} is invalid. Must be greater than start index ${startIndex} and not greater than ${cellCount}`);
+              }
+              return { startIndex, endIndex };
+            }
+          );
 
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error deleting cells: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error deleting cells: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 
@@ -591,24 +498,24 @@ Examples:
       rooAPI.extensionTools.registerTool(context.extension.id, {
         name: 'save_notebook',
         description: `Save the active notebook to disk. Use this after making changes to ensure they are persisted. This tool should be used after significant changes or before suggesting the user close the notebook. Returns a confirmation message with the saved notebook path.`,
-        execute: async () => {
-          try {
-            const result = await NotebookService.saveNotebook();
-            return {
-              content: [{
-                type: 'text',
-                text: result
-              }]
-            };
-          } catch (error) {
-            return {
-              content: [{
-                type: 'text',
-                text: `Error saving notebook: ${error instanceof Error ? error.message : String(error)}`
-              }],
-              isError: true
-            };
-          }
+        inputSchema: z.object({})
+      }, async () => {
+        try {
+          const result = await NotebookService.saveNotebook();
+          return {
+            content: [{
+              type: 'text',
+              text: result
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error saving notebook: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
         }
       });
 

@@ -56,12 +56,15 @@
     "build": "mkdir -p bin && vsce package --out bin/roo-nb-v$npm_package_version.vsix"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
+    "@vscode/vsce": "^3.3.2",
     "eslint": "^8.54.0",
-    "typescript": "^5.3.2",
-    "@vscode/vsce": "^3.3.2"
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "zod": "^3.24.3"
   }
-} 
+}
