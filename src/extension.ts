@@ -519,6 +519,50 @@ Examples:
         }
       });
 
+      // 9. Open Notebook Tool
+      rooAPI.extensionTools.registerTool(context.extension.id, {
+        name: 'open_notebook',
+        description: `Open specified .ipynb file in workspace and make it the active notebook editor. Returns detailed notebook information including URI, document type, kernel spec, and cell count. Use this when you need to switch to and work with a different notebook file in the workspace.`,
+        inputSchema: z.object({
+          path: z.string().describe("Path to the .ipynb notebook file to open, relative to workspace root")
+        })
+      }, async ({ path }) => {
+        try {
+          const notebookUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders?.[0].uri || vscode.Uri.file(''), path);
+          const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
+          const editor = await vscode.window.showNotebookDocument(notebook, { preview: false });
+          const kernelSpec = editor.notebook.metadata?.metadata?.kernelspec
+
+          const notebookInfo = {
+            uri: notebook.uri.toString(),
+            notebookType: notebook.notebookType,
+            isDirty: notebook.isDirty,
+            kernelLanguage: kernelSpec.language,
+            kernelName: `${kernelSpec.display_name} (${kernelSpec.name})`,
+            cellCount: notebook.cellCount
+          };
+
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                status: 'success',
+                message: `Notebook opened and activated: ${path}`,
+                notebook: notebookInfo
+              }, null, 2)
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error opening notebook: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
+        }
+      });
+
       vscode.window.showInformationMessage('Successfully registered Roo-NB notebook tools with Roo');
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to register tools: ${error instanceof Error ? error.message : String(error)}`);
