@@ -212,6 +212,7 @@ export class NotebookService {
 		result += `## Basic Information\n`
 		result += `- **URI**: ${uri}\n`
 		result += `- **Notebook Type**: ${notebook.notebookType}\n`
+		result += `- **Dirty?**: ${notebookEditor.notebook.isDirty}\n`
 		if (kernelSpec) {
 			result += `- **Kernel Language**: ${kernelSpec.language}\n`
 			result += `- **Kernel**: ${kernelSpec.display_name} (${kernelSpec.name})\n`
