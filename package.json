@@ -1,7 +1,7 @@
 {
   "name": "roo-nb",
   "displayName": "Roo Notebook Tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Notebook operation tools for Roo",
   "publisher": "RooVeterinaryInc",
   "private": true,
@@ -11,7 +11,7 @@
     "url": "https://github.com/RooVetGit/Roo-NB"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": ">=1.89.0"
   },
   "categories": [
     "Other"
