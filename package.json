@@ -1,8 +1,8 @@
 {
   "name": "roo-nb",
   "displayName": "Roo Notebook Tools",
-  "version": "0.3.0",
-  "description": "Notebook operation tools for Roo",
+  "version": "0.4.0",
+  "description": "Notebook operation tools for Language Models",
   "publisher": "RooVeterinaryInc",
   "private": true,
   "license": "Apache-2.0",
@@ -11,7 +11,7 @@
     "url": "https://github.com/RooVetGit/Roo-NB"
   },
   "engines": {
-    "vscode": ">=1.89.0"
+    "vscode": "^1.100.0"
   },
   "categories": [
     "Other"
@@ -22,12 +22,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "roo-nb.registerTools",
-        "title": "Register Notebook Tools with Roo"
-      }
-    ],
     "configuration": {
       "title": "Roo Notebook Tools",
       "properties": {
@@ -42,11 +36,233 @@
           "description": "Maximum seconds to wait for cell execution"
         }
       }
-    }
+    },
+    "languageModelTools": [
+      {
+        "name": "get_notebook_info",
+        "displayName": "Get Notebook Info",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "get_notebook_info",
+        "modelDescription": "Get comprehensive information about the active notebook, including URI, kernel, and cell statistics.",
+        "inputSchema": {}
+      },
+      {
+        "name": "get_notebook_cells",
+        "displayName": "Get Notebook Cells",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "get_notebook_cells",
+        "modelDescription": "Get information about all cells in the active notebook. Includes cell indexes, types, content, and outputs.",
+        "inputSchema": {}
+      },
+      {
+        "name": "insert_notebook_cells",
+        "displayName": "Insert Notebook Cells",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "insert_notebook_cells",
+        "modelDescription": "Insert multiple cells at a specified position in the active notebook. By default, new code cells are executed unless noexec is true.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cells": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "cell_type": {
+                    "type": "string",
+                    "enum": [
+                      "code",
+                      "markdown"
+                    ]
+                  },
+                  "language_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "content",
+                  "cell_type"
+                ]
+              }
+            },
+            "insert_position": {
+              "type": "integer"
+            },
+            "noexec": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "cells"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      {
+        "name": "replace_notebook_cells",
+        "displayName": "Replace Notebook Cells",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "replace_notebook_cells",
+        "modelDescription": "Replace a range of cells in the notebook with new cells. Executed automatically unless noexec is true.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cells": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "cell_type": {
+                    "type": "string",
+                    "enum": [
+                      "code",
+                      "markdown"
+                    ]
+                  },
+                  "language_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "content",
+                  "cell_type"
+                ]
+              }
+            },
+            "noexec": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "start_index",
+            "end_index",
+            "cells"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      {
+        "name": "modify_notebook_cell_content",
+        "displayName": "Modify Notebook Cell Content",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "modify_notebook_cell_content",
+        "modelDescription": "Modify the content of an existing cell. By default, modified code cells are executed unless noexec is true.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cell_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "content": {
+              "type": "string"
+            },
+            "noexec": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "cell_index",
+            "content"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      {
+        "name": "execute_notebook_cells",
+        "displayName": "Execute Notebook Cells",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "execute_notebook_cells",
+        "modelDescription": "Execute a range of cells in the active notebook.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end_index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "start_index",
+            "end_index"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      {
+        "name": "delete_notebook_cells",
+        "displayName": "Delete Notebook Cells",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "delete_notebook_cells",
+        "modelDescription": "Delete a range of cells from the notebook.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end_index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "start_index",
+            "end_index"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      {
+        "name": "save_notebook",
+        "displayName": "Save Notebook",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "save_notebook",
+        "modelDescription": "Save the active notebook to disk.",
+        "inputSchema": {}
+      },
+      {
+        "name": "open_notebook",
+        "displayName": "Open Notebook",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "open_notebook",
+        "modelDescription": "Open a specified .ipynb file in the workspace and make it the active notebook editor.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Path to the .ipynb notebook file to open, relative to workspace root"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    ]
   },
-  "extensionDependencies": [
-    "RooVeterinaryInc.roo-cline"
-  ],
+  "extensionDependencies": [],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -57,7 +273,7 @@
   },
   "devDependencies": {
     "@types/node": "18.x",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
     "@vscode/vsce": "^3.3.2",
