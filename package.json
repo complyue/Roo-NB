@@ -279,8 +279,5 @@
     "@vscode/vsce": "^3.3.2",
     "eslint": "^8.54.0",
     "typescript": "^5.3.2"
-  },
-  "dependencies": {
-    "zod": "^3.24.3"
   }
 }
