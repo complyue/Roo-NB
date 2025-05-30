@@ -1,10 +1,10 @@
 # Roo Notebook Tools
 
-This extension provides notebook operation tools for Roo, enabling AI-assisted notebook manipulation and execution.
+This extension provides notebook operation tools for VSCode's language model interface, enabling AI-assisted notebook manipulation and execution.
 
 ## Features
 
-This extension integrates with Roo to provide the following notebook tools:
+This extension integrates with VSCode's built-in language model interface to provide the following notebook tools:
 
 - **Notebook Info**: Get comprehensive information about the active notebook, including URI, kernel, and cell statistics
 - **Get Cells**: View information about all cells in the active notebook
@@ -17,9 +17,9 @@ This extension integrates with Roo to provide the following notebook tools:
 
 ## Usage
 
-Once installed, the extension will automatically register its tools with Roo.
+Once installed, the extension will automatically register its tools with VSCode's language model interface.
 
-You can then use the tools in Roo by asking it to:
+You can then use the tools with any compatible language model by asking it to:
 
 - "Show me information about the active notebook"
 - "Get details of all the cells in the active notebook"
@@ -30,8 +30,7 @@ You can then use the tools in Roo by asking it to:
 
 ## Requirements
 
-- VSCode 1.85.0 or higher
-- Roo extension (RooVeterinaryInc.roo-cline)
+- Visual Studio Code version 1.85.0 or higher (required for Language Model Tools support)
 
 ## Extension Settings
 
@@ -49,4 +48,4 @@ You can adjust these settings in your VS Code settings based on your needs.
 
 ## Development
 
-This extension demonstrates how to create a VSCode extension that provides notebook manipulation capabilities for Roo using the Extension Tool API.
+This extension demonstrates how to create a VSCode extension that provides notebook manipulation capabilities via VSCode's built-in language model interface.
