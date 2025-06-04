@@ -1,14 +1,14 @@
 {
   "name": "roo-nb",
   "displayName": "Roo Notebook Tools",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Notebook operation tools for Language Models",
-  "publisher": "RooVeterinaryInc",
+  "publisher": "ComplYue",
   "private": true,
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RooVetGit/Roo-NB"
+    "url": "https://github.com/longrun-ai/Roo-NB"
   },
   "engines": {
     "vscode": "^1.100.0"
@@ -21,6 +21,7 @@
     "onNotebook:*"
   ],
   "main": "./out/extension.js",
+  "icon": "roo-nb.png",
   "contributes": {
     "configuration": {
       "title": "Roo Notebook Tools",
