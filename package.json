@@ -43,16 +43,14 @@
         "displayName": "Get Notebook Info",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "get_notebook_info",
-        "modelDescription": "Get comprehensive information about the active notebook, including URI, kernel, and cell statistics.",
-        "inputSchema": {}
+        "modelDescription": "Get comprehensive information about the active notebook, including URI, kernel, and cell statistics."
       },
       {
         "name": "get_notebook_cells",
         "displayName": "Get Notebook Cells",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "get_notebook_cells",
-        "modelDescription": "Get information about all cells in the active notebook. Includes cell indexes, types, content, and outputs.",
-        "inputSchema": {}
+        "modelDescription": "Get information about all cells in the active notebook. Includes cell indexes, types, content, and outputs."
       },
       {
         "name": "insert_notebook_cells",
@@ -65,21 +63,25 @@
           "properties": {
             "cells": {
               "type": "array",
+              "description": "Array of cell definitions to insert. Each cell must specify content and cell_type.",
               "items": {
                 "type": "object",
                 "properties": {
                   "content": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The content of the cell to insert"
                   },
                   "cell_type": {
                     "type": "string",
                     "enum": [
                       "code",
                       "markdown"
-                    ]
+                    ],
+                    "description": "The type of cell to insert - either 'code' for executable cells or 'markdown' for text cells"
                   },
                   "language_id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Optional language ID for code cells (e.g., 'python', 'javascript'). If not provided, will try to infer from existing code cells or default to 'python'"
                   }
                 },
                 "required": [
@@ -89,10 +91,12 @@
               }
             },
             "insert_position": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Optional position to insert cells. Defaults to the end of the notebook. Must be between 0 and the current cell count"
             },
             "noexec": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "If true, skips execution of inserted code cells. By default (false), code cells are executed after insertion"
             }
           },
           "required": [
@@ -106,17 +110,19 @@
         "displayName": "Replace Notebook Cells",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "replace_notebook_cells",
-        "modelDescription": "Replace a range of cells in the notebook with new cells. Executed automatically unless noexec is true.",
+        "modelDescription": "Replace a range of cells in the notebook with new cells. Uses half-open range [start_index, stop_index) - meaning stop_index is exclusive. Executed automatically unless noexec is true.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "start_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The starting index (inclusive) of the range of cells to replace"
             },
-            "end_index": {
+            "stop_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The stopping index (exclusive) of the range of cells to replace. Must be greater than start_index. For example, to replace a single cell at index i, use start_index=i and stop_index=i+1"
             },
             "cells": {
               "type": "array",
@@ -149,7 +155,7 @@
           },
           "required": [
             "start_index",
-            "end_index",
+            "stop_index",
             "cells"
           ],
           "additionalProperties": {}
@@ -166,13 +172,16 @@
           "properties": {
             "cell_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The index of the cell to modify. Must be between 0 and the current cell count minus 1"
             },
             "content": {
-              "type": "string"
+              "type": "string",
+              "description": "The new content for the cell. Will maintain the cell's existing type and language"
             },
             "noexec": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "If true, skips execution of the modified cell if it's a code cell. By default (false), code cells are executed after modification"
             }
           },
           "required": [
@@ -187,22 +196,24 @@
         "displayName": "Execute Notebook Cells",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "execute_notebook_cells",
-        "modelDescription": "Execute a range of cells in the active notebook.",
+        "modelDescription": "Execute a range of cells in the active notebook. Uses half-open range [start_index, stop_index) - meaning stop_index is exclusive.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "start_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The starting index (inclusive) of the range of cells to execute"
             },
-            "end_index": {
+            "stop_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The stopping index (exclusive) of the range of cells to execute. Must be greater than start_index. For example, to execute a single cell at index i, use start_index=i and stop_index=i+1"
             }
           },
           "required": [
             "start_index",
-            "end_index"
+            "stop_index"
           ],
           "additionalProperties": {}
         }
@@ -212,22 +223,24 @@
         "displayName": "Delete Notebook Cells",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "delete_notebook_cells",
-        "modelDescription": "Delete a range of cells from the notebook.",
+        "modelDescription": "Delete a range of cells from the notebook. Uses half-open range [start_index, stop_index) - meaning stop_index is exclusive.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "start_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The starting index (inclusive) of the range of cells to delete"
             },
-            "end_index": {
+            "stop_index": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "The stopping index (exclusive) of the range of cells to delete. Must be greater than start_index. For example, to delete a single cell at index i, use start_index=i and stop_index=i+1"
             }
           },
           "required": [
             "start_index",
-            "end_index"
+            "stop_index"
           ],
           "additionalProperties": {}
         }
@@ -237,8 +250,7 @@
         "displayName": "Save Notebook",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "save_notebook",
-        "modelDescription": "Save the active notebook to disk.",
-        "inputSchema": {}
+        "modelDescription": "Save the active notebook to disk."
       },
       {
         "name": "open_notebook",
@@ -251,7 +263,7 @@
           "properties": {
             "path": {
               "type": "string",
-              "description": "Path to the .ipynb notebook file to open, relative to workspace root"
+              "description": "Path to the .ipynb notebook file to open, relative to workspace root. The file must exist and be a valid Jupyter notebook"
             }
           },
           "required": [

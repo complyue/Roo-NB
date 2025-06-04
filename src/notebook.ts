@@ -85,7 +85,7 @@ function showCell(cell: vscode.NotebookCell, maxOutputSize: number): string {
  *
  * @param cells The cells array from the notebook
  * @param startIndex The starting index of cells to execute
- * @param endIndex The ending index of cells to execute
+ * @param stopIndex The stopping index of cells to execute
  * @param maxOutputSize Maximum size for cell output
  * @param timeoutSeconds Maximum seconds to wait for execution
  * @returns A string containing formatted information about the executed cells
@@ -93,18 +93,18 @@ function showCell(cell: vscode.NotebookCell, maxOutputSize: number): string {
 async function executeNotebookCells(
 	cells: vscode.NotebookCell[],
 	startIndex: number,
-	endIndex: number,
+	stopIndex: number,
 	maxOutputSize: number = 2000,
 	timeoutSeconds: number = 30,
 ): Promise<string> {
 	// Get the cells to execute
-	const cellsToExecute = cells.slice(startIndex, endIndex)
+	const cellsToExecute = cells.slice(startIndex, stopIndex)
 
 	// Filter only code cells as markdown cells cannot be executed
 	const codeCells = cellsToExecute.filter((cell) => cell.kind === vscode.NotebookCellKind.Code)
 
 	if (codeCells.length === 0) {
-		return `# Cell Execution\n\nNo code cells found in the specified range (${startIndex}-${endIndex - 1}).`
+		return `# Cell Execution\n\nNo code cells found in the specified range (${startIndex}-${stopIndex - 1}).`
 	}
 
 	// Store previous execution orders for all code cells
@@ -121,7 +121,7 @@ async function executeNotebookCells(
 	// Execute the cells
 	await vscode.commands.executeCommand("notebook.cell.execute", {
 		start: startIndex,
-		end: endIndex,
+		end: stopIndex,
 	})
 
 	// Poll for execution completion
@@ -154,7 +154,7 @@ async function executeNotebookCells(
 	if (!allComplete) {
 		result += `> Mind that not all cells completed execution within ${timeoutSeconds} seconds!\n`
 	}
-	result += `Executed ${codeCells.length} code cells in range ${startIndex}-${endIndex - 1}.\n\n`
+	result += `Executed ${codeCells.length} code cells in range ${startIndex}-${stopIndex - 1}.\n\n`
 
 	for (const cell of codeCells) {
 		result += showCell(cell, maxOutputSize)
@@ -361,7 +361,7 @@ export class NotebookService {
 	static async replaceCells(
 		validateIndicesAndCells: (cellCount: number) => {
 			startIndex: number
-			endIndex: number
+			stopIndex: number
 			cells: Array<{
 				content: string
 				cell_type?: string
@@ -380,9 +380,9 @@ export class NotebookService {
 		const existingCells = notebookEditor.notebook.getCells()
 
 		// Let the callback validate indices and cells based on cell count
-		const { startIndex, endIndex, cells } = validateIndicesAndCells(existingCells.length)
+		const { startIndex, stopIndex, cells } = validateIndicesAndCells(existingCells.length)
 
-		const cellsToReplace = existingCells.slice(startIndex, endIndex)
+		const cellsToReplace = existingCells.slice(startIndex, stopIndex)
 		const cellDataArray: vscode.NotebookCellData[] = cells.map((cellDefinition, iCell) => {
 			// Determine cell kind based on cell_type or from existing cell if not specified
 			let cellKind: vscode.NotebookCellKind
@@ -427,7 +427,7 @@ export class NotebookService {
 
 		// Create notebook edit to replace the range with new cells
 		const notebookEdit = vscode.NotebookEdit.replaceCells(
-			new vscode.NotebookRange(startIndex, endIndex),
+			new vscode.NotebookRange(startIndex, stopIndex),
 			cellDataArray,
 		)
 
@@ -437,7 +437,7 @@ export class NotebookService {
 
 		await vscode.workspace.applyEdit(workspaceEdit)
 
-		const result = `Successfully replaced ${endIndex - startIndex} cells with ${cellDataArray.length} new cells.`
+		const result = `Successfully replaced ${stopIndex - startIndex} cells with ${cellDataArray.length} new cells.`
 		if (noexec) return result
 
 		const executionResult = await executeNotebookCells(
@@ -479,7 +479,7 @@ export class NotebookService {
 				cellIndex = validateCellIndex(cellCount)
 				return {
 					startIndex: cellIndex,
-					endIndex: cellIndex + 1,
+					stopIndex: cellIndex + 1,
 					cells: [{ content }],
 				}
 			},
@@ -510,7 +510,7 @@ export class NotebookService {
 	 * @returns A string containing formatted information about the executed cells
 	 */
 	static async executeCells(
-		validateIndices: (cellCount: number) => { startIndex: number; endIndex: number },
+		validateIndices: (cellCount: number) => { startIndex: number; stopIndex: number },
 		maxOutputSize: number = 2000,
 		timeoutSeconds: number = 30,
 	): Promise<string> {
@@ -522,10 +522,10 @@ export class NotebookService {
 		const cells = notebookEditor.notebook.getCells()
 
 		// Let the callback validate and return the indices based on cell count
-		const { startIndex, endIndex } = validateIndices(cells.length)
+		const { startIndex, stopIndex } = validateIndices(cells.length)
 
 		// Execute the cells and get the results
-		const result = await executeNotebookCells(cells, startIndex, endIndex, maxOutputSize, timeoutSeconds)
+		const result = await executeNotebookCells(cells, startIndex, stopIndex, maxOutputSize, timeoutSeconds)
 
 		return result
 	}
@@ -537,7 +537,7 @@ export class NotebookService {
 	 * @returns A string indicating success or failure
 	 */
 	static async deleteCells(
-		validateIndices: (cellCount: number) => { startIndex: number; endIndex: number },
+		validateIndices: (cellCount: number) => { startIndex: number; stopIndex: number },
 	): Promise<string> {
 		const notebookEditor = vscode.window.activeNotebookEditor
 		if (!notebookEditor) {
@@ -547,13 +547,13 @@ export class NotebookService {
 		const existingCells = notebookEditor.notebook.getCells()
 
 		// Let the callback validate indices based on cell count
-		const { startIndex, endIndex } = validateIndices(existingCells.length)
+		const { startIndex, stopIndex } = validateIndices(existingCells.length)
 
 		// Calculate how many cells will be deleted
-		const deleteCount = endIndex - startIndex
+		const deleteCount = stopIndex - startIndex
 
 		// Create notebook edit to delete the range of cells
-		const notebookEdit = vscode.NotebookEdit.deleteCells(new vscode.NotebookRange(startIndex, endIndex))
+		const notebookEdit = vscode.NotebookEdit.deleteCells(new vscode.NotebookRange(startIndex, stopIndex))
 
 		// Apply the edit
 		const workspaceEdit = new vscode.WorkspaceEdit()
@@ -561,7 +561,7 @@ export class NotebookService {
 
 		await vscode.workspace.applyEdit(workspaceEdit)
 
-		return `Successfully deleted ${deleteCount} cell${deleteCount !== 1 ? "s" : ""} from index ${startIndex} to ${endIndex - 1}.`
+		return `Successfully deleted ${deleteCount} cell${deleteCount !== 1 ? "s" : ""} from index ${startIndex} to ${stopIndex - 1}.`
 	}
 
 	/**
