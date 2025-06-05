@@ -5,7 +5,7 @@
   "description": "Notebook operation tools for Language Models",
   "publisher": "ComplYue",
   "private": true,
-  "license": "Apache-2.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/longrun-ai/Roo-NB"
